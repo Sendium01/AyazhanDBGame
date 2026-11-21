@@ -345,25 +345,28 @@ function renderUpdate() {
 
 /* --- ПРАКТИКА 2: НОРМАЛИЗАЦИЯ --- */
 function renderNormalize() {
-    // ИСПРАВЛЕНО: правильные названия полей для проверки
     const zonesData = [
         { id: "students", title: "Студенты", correct: ["ID_студента", "ФИО"] },
         { id: "teachers", title: "Преподаватели", correct: ["ID_преподавателя", "ФИО_препода", "Кабинет"] },
         { id: "records", title: "Записи", correct: ["ID_студента", "ID_преподавателя", "Оценка"] }
     ];
 
+    // ИСПРАВЛЕНИЕ: Добавляем дубликаты ID для связующей таблицы
     const poolItems = [
         { name: "ID_студента", zone: "students" },
         { name: "ФИО", zone: "students" },
         { name: "ID_преподавателя", zone: "teachers" },
         { name: "ФИО_препода", zone: "teachers" },
         { name: "Кабинет", zone: "teachers" },
-        { name: "Оценка", zone: "records" }
+        { name: "Оценка", zone: "records" },
+        { name: "ID_студента", zone: "records" },         
+        { name: "ID_преподавателя", zone: "records" }     
     ].sort(() => Math.random() - 0.5);
 
     const wrap = el('div');
     
     const pool = el('div', 'pool');
+    pool.id = "mainPool";
     poolItems.forEach(item => {
         const chip = el('div', 'chip', item.name);
         chip.dataset.name = item.name;
@@ -408,14 +411,20 @@ function renderNormalize() {
         zones.forEach(z => {
             const placed = Array.from(z.slot.querySelectorAll('.chip')).map(c => c.dataset.name);
             const correct = z.data.correct;
-            if (placed.length !== correct.length || !placed.every(v => correct.includes(v))) allOk = false;
+            
+            const placedSorted = [...placed].sort();
+            const correctSorted = [...correct].sort();
+            
+            if (JSON.stringify(placedSorted) !== JSON.stringify(correctSorted)) {
+                allOk = false;
+            }
         });
 
         if (allOk) {
-            showFeedback("✅ Идеально! Ты разбил таблицу на связанные — это <b>нормализация</b>.", "ok");
+            showFeedback("✅ Идеально! Ты разбил таблицу на связанные — это <b>нормализация</b>. Таблица «Записи» связала студентов и преподавателей с помощью внешних ключей.", "ok");
             enableNext(true);
         } else {
-            showFeedback("❌ Не все поля на своих местах. Подумай, куда должны попасть ID_преподавателя и ФИО_препода.", "bad");
+            showFeedback("❌ Не все поля на своих местах. В «Записях» должны быть ОБА ID и Оценка.", "bad");
         }
     });
     wrap.appendChild(btnCheck);
