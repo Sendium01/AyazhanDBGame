@@ -43,6 +43,7 @@ const levels = [
 let currentLevel = 0;
 let canProceed = false;
 
+// DOM элементы
 const stage = document.getElementById('stage');
 const feedback = document.getElementById('feedback');
 const btnNext = document.getElementById('btnNext');
@@ -51,6 +52,7 @@ const progress = document.getElementById('progress');
 const btnCheat = document.getElementById('btnCheat');
 const cheatPanel = document.getElementById('cheatPanel');
 
+// Утилиты
 function el(tag, className, html) {
     const e = document.createElement(tag);
     if (className) e.className = className;
@@ -83,7 +85,10 @@ function enableNext(val) {
     btnNext.disabled = !val;
 }
 
+// Переключение шпаргалки
 btnCheat.addEventListener('click', () => cheatPanel.classList.toggle('hidden'));
+
+// Кнопка Далее
 btnNext.addEventListener('click', () => {
     if (canProceed) {
         currentLevel++;
@@ -91,6 +96,7 @@ btnNext.addEventListener('click', () => {
     }
 });
 
+// Загрузка уровня
 function loadLevel() {
     if (currentLevel >= levels.length) return;
     const level = levels[currentLevel];
@@ -130,7 +136,6 @@ function renderTermStructure() {
         tr.appendChild(el('td', null, r.name));
         tr.appendChild(el('td', null, r.age));
         
-        // Добавляем обработчик на всю строку (Запись)
         tr.style.cursor = "pointer";
         tr.addEventListener('click', () => {
             if (r.name === "Смирнов") {
@@ -155,7 +160,6 @@ function renderTermPK() {
     const thead = el('thead');
     const trh = el('tr');
     
-    // Заголовки
     ["ID", "Имя", "Предмет"].forEach((h, idx) => {
         const th = el('th', null, h);
         th.style.cursor = "pointer";
@@ -296,6 +300,7 @@ function renderUpdate() {
         tr.appendChild(el('td', null, r.teacher));
         
         const tdRoom = el('td', 'clickable', r.room);
+        tdRoom.dataset.ri = ri;
         tdRoom.style.cursor = "pointer";
         tdRoom.addEventListener('click', () => {
             const v = prompt("Новый кабинет для " + r.teacher + ":", tdRoom.textContent);
@@ -313,31 +318,25 @@ function renderUpdate() {
     const btnCheck = el('button', null, 'Проверить');
     btnCheck.style.marginTop = '10px';
     btnCheck.addEventListener('click', () => {
-        let ok = 0, petrovRows = 0;
-        tbody.querySelectorAll('td[data-ri]').forEach(td => {
-            if (rows[+td.dataset.ri].teacher === "Петров") {
-                petrovRows++;
-                if (td.textContent.trim() === "410") { td.classList.add('good'); ok++; }
-                else td.classList.add('bad');
+        let ok = 0, pRows = 0;
+        Array.from(tbody.children).forEach((tr, i) => {
+            if (rows[i].teacher === "Петров") {
+                pRows++;
+                const roomCell = tr.children[2];
+                if (roomCell.textContent.trim() === "410") {
+                    roomCell.classList.add('good');
+                    ok++;
+                } else {
+                    roomCell.classList.add('bad');
+                }
             }
         });
-        // Добавляем data-ri вручную для проверки
-        if (ok === 0) {
-            let correctCount = 0, pRows = 0;
-            Array.from(tbody.children).forEach((tr, i) => {
-                if (rows[i].teacher === "Петров") {
-                    pRows++;
-                    const roomCell = tr.children[2];
-                    if (roomCell.textContent.trim() === "410") correctCount++;
-                    else roomCell.classList.add('bad');
-                }
-            });
-            if (correctCount === pRows && pRows > 0) {
-                showFeedback("✅ Верно! Пришлось править <b>две</b> строки. Это <b>аномалия обновления</b> — избыточность заставляет дублировать действия.", "ok");
-                enableNext(true);
-            } else {
-                showFeedback(`Обновлено ${correctCount} из ${pRows} строк с Петровым.`, "bad");
-            }
+        
+        if (ok === pRows && pRows > 0) {
+            showFeedback("✅ Верно! Пришлось править <b>две</b> строки. Это <b>аномалия обновления</b> — избыточность заставляет дублировать действия.", "ok");
+            enableNext(true);
+        } else {
+            showFeedback(`Обновлено ${ok} из ${pRows} строк с Петровым.`, "bad");
         }
     });
     wrap.appendChild(btnCheck);
@@ -346,10 +345,11 @@ function renderUpdate() {
 
 /* --- ПРАКТИКА 2: НОРМАЛИЗАЦИЯ --- */
 function renderNormalize() {
+    // ИСПРАВЛЕНО: правильные названия полей для проверки
     const zonesData = [
         { id: "students", title: "Студенты", correct: ["ID_студента", "ФИО"] },
         { id: "teachers", title: "Преподаватели", correct: ["ID_преподавателя", "ФИО_препода", "Кабинет"] },
-        { id: "records", title: "Записи", correct: ["ID_студента", "ID_препода", "Оценка"] }
+        { id: "records", title: "Записи", correct: ["ID_студента", "ID_преподавателя", "Оценка"] }
     ];
 
     const poolItems = [
@@ -415,7 +415,7 @@ function renderNormalize() {
             showFeedback("✅ Идеально! Ты разбил таблицу на связанные — это <b>нормализация</b>.", "ok");
             enableNext(true);
         } else {
-            showFeedback("❌ Не все поля на своих местах.", "bad");
+            showFeedback("❌ Не все поля на своих местах. Подумай, куда должны попасть ID_преподавателя и ФИО_препода.", "bad");
         }
     });
     wrap.appendChild(btnCheck);
