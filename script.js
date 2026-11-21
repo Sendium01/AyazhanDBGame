@@ -30,7 +30,7 @@ const levels = [
     },
     {
         title: "Практика 2. Нормализация",
-        speech: "Таблица трещит по швам. Разложи поля по трём таблицам, чтобы устранить избыточность. Кликай по полю внизу, затем по нужной зоне.",
+        speech: "Таблица трещит по швам. Разложи поля по трём таблицам, чтобы устранить избыточность. Обрати внимание: в главных таблицах ключи помечены <b>(PK)</b>, а в связующей — <b>(FK)</b>. Кликай по полю внизу, затем по нужной зоне.",
         type: "normalize"
     },
     {
@@ -346,21 +346,21 @@ function renderUpdate() {
 /* --- ПРАКТИКА 2: НОРМАЛИЗАЦИЯ --- */
 function renderNormalize() {
     const zonesData = [
-        { id: "students", title: "Студенты", correct: ["ID_студента", "ФИО"] },
-        { id: "teachers", title: "Преподаватели", correct: ["ID_преподавателя", "ФИО_препода", "Кабинет"] },
-        { id: "records", title: "Записи", correct: ["ID_студента", "ID_преподавателя", "Оценка"] }
+        { id: "students", title: "Студенты", correct: ["ID_студента (PK)", "ФИО"] },
+        { id: "teachers", title: "Преподаватели", correct: ["ID_преподавателя (PK)", "ФИО_препода", "Кабинет"] },
+        { id: "records", title: "Записи", correct: ["ID_студента (FK)", "ID_преподавателя (FK)", "Оценка"] }
     ];
 
-    // ИСПРАВЛЕНИЕ: Добавляем дубликаты ID для связующей таблицы
+    // Уникальные карточки
     const poolItems = [
-        { name: "ID_студента", zone: "students" },
+        { name: "ID_студента (PK)", zone: "students" },
         { name: "ФИО", zone: "students" },
-        { name: "ID_преподавателя", zone: "teachers" },
+        { name: "ID_преподавателя (PK)", zone: "teachers" },
         { name: "ФИО_препода", zone: "teachers" },
         { name: "Кабинет", zone: "teachers" },
         { name: "Оценка", zone: "records" },
-        { name: "ID_студента", zone: "records" },         
-        { name: "ID_преподавателя", zone: "records" }     
+        { name: "ID_студента (FK)", zone: "records" },         
+        { name: "ID_преподавателя (FK)", zone: "records" }     
     ].sort(() => Math.random() - 0.5);
 
     const wrap = el('div');
@@ -408,6 +408,8 @@ function renderNormalize() {
     btnCheck.style.marginTop = '10px';
     btnCheck.addEventListener('click', () => {
         let allOk = true;
+        let errorMsg = "";
+
         zones.forEach(z => {
             const placed = Array.from(z.slot.querySelectorAll('.chip')).map(c => c.dataset.name);
             const correct = z.data.correct;
@@ -417,14 +419,15 @@ function renderNormalize() {
             
             if (JSON.stringify(placedSorted) !== JSON.stringify(correctSorted)) {
                 allOk = false;
+                errorMsg = `В зоне «${z.data.title}» не хватает полей или есть лишние.`;
             }
         });
 
         if (allOk) {
-            showFeedback("✅ Идеально! Ты разбил таблицу на связанные — это <b>нормализация</b>. Таблица «Записи» связала студентов и преподавателей с помощью внешних ключей.", "ok");
+            showFeedback("✅ Идеально! Ты разбил таблицу на связанные — это <b>нормализация</b>. Таблица «Записи» связала студентов и преподавателей с помощью внешних ключей (FK).", "ok");
             enableNext(true);
         } else {
-            showFeedback("❌ Не все поля на своих местах. В «Записях» должны быть ОБА ID и Оценка.", "bad");
+            showFeedback("❌ " + errorMsg + " Вспомни: PK — это главный ключ в своей таблице, а FK — это ссылка на чужой ключ в связующей таблице.", "bad");
         }
     });
     wrap.appendChild(btnCheck);
