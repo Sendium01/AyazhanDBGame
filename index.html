@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Бюро находок данных</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#1e293b; --panel2:#273449; --line:#334155;
+    --text:#e2e8f0; --muted:#94a3b8; --accent:#38bdf8; --ok:#22c55e;
+    --bad:#ef4444; --warn:#f59e0b; --gold:#fbbf24;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:'Segoe UI',system-ui,sans-serif;
+    background:radial-gradient(1200px 600px at 20% -10%, #1e3a5f 0%, var(--bg) 60%);
+    color:var(--text); min-height:100vh; padding:20px;
+  }
+  .wrap{max-width:960px;margin:0 auto;}
+  header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+  h1{font-size:22px;margin:0;letter-spacing:.5px;}
+  h1 span{color:var(--accent);}
+  .progress{display:flex;gap:6px;align-items:center;}
+  .dot{width:12px;height:12px;border-radius:50%;background:var(--line);transition:.3s;}
+  .dot.active{background:var(--accent);box-shadow:0 0 8px var(--accent);}
+  .dot.done{background:var(--ok);}
+  .card{
+    background:linear-gradient(180deg,var(--panel2),var(--panel));
+    border:1px solid var(--line);border-radius:16px;padding:22px;
+    box-shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+  .boss{display:flex;gap:12px;margin-bottom:16px;}
+  .boss .avatar{
+    width:44px;height:44px;border-radius:50%;flex:0 0 44px;
+    background:linear-gradient(135deg,#f59e0b,#ef4444);
+    display:flex;align-items:center;justify-content:center;font-size:22px;
+  }
+  .boss .speech{
+    background:#0b1220;border:1px solid var(--line);border-radius:12px;
+    padding:12px 14px;font-size:15px;line-height:1.5;flex:1;
+  }
+  .boss .speech b{color:var(--gold);}
+  .task{font-size:15px;color:var(--muted);margin:10px 0 14px;line-height:1.5;}
+  button{
+    font:inherit;cursor:pointer;border:none;border-radius:10px;
+    padding:10px 18px;background:var(--accent);color:#04263a;font-weight:700;
+    transition:.2s;
+  }
+  button:hover{filter:brightness(1.1);transform:translateY(-1px);}
+  button:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--text);font-weight:500;}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .table{
+    width:100%;border-collapse:collapse;margin:12px 0;font-size:14px;
+  }
+  .table th,.table td{border:1px solid var(--line);padding:8px 10px;text-align:left;}
+  .table th{background:#0b1220;color:var(--accent);font-weight:600;}
+  .table tr.hl td{background:rgba(56,189,248,.12);}
+  .table td.clickable{cursor:pointer;transition:.15s;}
+  .table td.clickable:hover{background:rgba(56,189,248,.18);}
+  .table td.sel{outline:2px solid var(--accent);background:rgba(56,189,248,.22);}
+  .table td.good{background:rgba(34,197,94,.25);}
+  .table td.bad{background:rgba(239,68,68,.25);}
+  .cards{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0;}
+  .chip{
+    padding:8px 14px;border-radius:20px;background:#0b1220;
+    border:1px solid var(--line);cursor:pointer;transition:.15s;font-size:14px;
+  }
+  .chip:hover{border-color:var(--accent);}
+  .chip.sel{background:var(--accent);color:#04263a;font-weight:700;border-color:var(--accent);}
+  .chip.good{background:rgba(34,197,94,.3);border-color:var(--ok);}
+  .chip.bad{background:rgba(239,68,68,.3);border-color:var(--bad);}
+  .feedback{margin-top:14px;padding:12px 14px;border-radius:10px;font-size:14px;line-height:1.5;display:none;}
+  .feedback.show{display:block;}
+  .feedback.ok{background:rgba(34,197,94,.15);border:1px solid var(--ok);}
+  .feedback.bad{background:rgba(239,68,68,.15);border:1px solid var(--bad);}
+  .feedback.info{background:rgba(56,189,248,.12);border:1px solid var(--accent);}
+  .zones{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:14px 0;}
+  .zone{
+    background:#0b1220;border:2px dashed var(--line);border-radius:12px;
+    padding:12px;min-height:110px;transition:.2s;
+  }
+  .zone.over{border-color:var(--accent);background:rgba(56,189,248,.08);}
+  .zone h4{margin:0 0 8px;font-size:13px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;}
+  .zone .slot{display:flex;flex-direction:column;gap:6px;}
+  .field{
+    padding:6px 10px;border-radius:8px;background:var(--panel2);
+    border:1px solid var(--line);cursor:grab;font-size:13px;user-select:none;
+  }
+  .field:active{cursor:grabbing;}
+  .field.dragging{opacity:.4;}
+  .field .tag{font-size:10px;color:var(--muted);margin-left:6px;}
+  .field .tag.pk{color:var(--gold);}
+  .field .tag.fk{color:var(--accent);}
+  .pool{display:flex;gap:8px;flex-wrap:wrap;background:#0b1220;border-radius:10px;padding:10px;margin:10px 0;min-height:48px;}
+  .timer{font-size:13px;color:var(--warn);font-weight:700;}
+  .final{
+    text-align:center;padding:30px 10px;
+  }
+  .diploma{
+    background:linear-gradient(135deg,#1e293b,#0f172a);
+    border:2px solid var(--gold);border-radius:16px;padding:24px;margin:16px 0;
+  }
+  .diploma h2{color:var(--gold);margin:0 0 6px;font-size:24px;}
+  .diploma .name{font-size:18px;color:var(--accent);margin:8px 0;}
+  .cheat{font-size:13px;line-height:1.7;color:var(--muted);text-align:left;margin-top:16px;}
+  .cheat b{color:var(--text);}
+  .hidden{display:none;}
+  .footer{display:flex;justify-content:space-between;gap:10px;margin-top:16px;flex-wrap:wrap;}
+  @media(max-width:600px){body{padding:10px;} .card{padding:16px;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🏛️ Бюро находок <span>данных</span></h1>
+    <div class="progress" id="progress"></div>
+  </header>
+
+  <div class="card">
+    <div class="boss">
+      <div class="avatar">👔</div>
+      <div class="speech" id="speech">Добро пожаловать в Бюро! Первый рабочий день. Начнём с простого — разбери картотеку.</div>
+    </div>
+    <div id="stage"></div>
+    <div class="feedback" id="feedback"></div>
+    <div class="footer">
+      <button class="ghost" id="btnCheat">📖 Шпаргалка</button>
+      <div class="row">
+        <button class="ghost" id="btnReset">↺ Сброс</button>
+        <button id="btnNext" disabled>Далее →</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card hidden" id="cheatPanel" style="margin-top:16px;">
+    <h3 style="margin-top:0;color:var(--accent);">📖 Шпаргалка терминов</h3>
+    <div class="cheat">
+      <b>База данных (БД)</b> — организованная совокупность данных по правилам.<br>
+      <b>Таблица</b> — набор однородных данных в строках и столбцах.<br>
+      <b>Запись (строка)</b> — сведения об одном объекте.<br>
+      <b>Поле (столбец)</b> — характеристика объекта.<br>
+      <b>Однотабличная (плоская) БД</b> — все данные в одной таблице, без связей.<br>
+      <b>Первичный ключ (PK)</b> — поле/набор полей, уникально идентифицирующих запись; не пуст.<br>
+      <b>Составной ключ</b> — PK из нескольких полей.<br>
+      <b>Внешний ключ (FK)</b> — поле, ссылающееся на PK другой таблицы; обеспечивает связь.<br>
+      <b>Связи:</b> 1:1, 1:N (один ко многим), M:N (многие ко многим, через промежуточную таблицу).<br>
+      <b>Целостность:</b> PK уникален и не пуст; FK ссылается на существующую запись; значения по типу.<br>
+      <b>Избыточность</b> — повтор одних и тех же данных.<br>
+      <b>Аномалии</b> — проблемы при вставке / обновлении / удалении из-за плохой структуры.<br>
+      <b>Нормализация</b> — разбиение данных на связанные таблицы для устранения избыточности и аномалий.<br>
+      <b>СУБД</b> — программа управления БД (MySQL, PostgreSQL). <b>SQL</b> — язык запросов.
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================== ДАННЫЕ ================== */
+const LEVELS = [
+  /* Уровень 1 — структура */
+  {
+    title:"Уровень 1. Разбери картотеку",
+    speech:"Вот карточки новых посетителей. Разложи их по столбцам: имя, город, телефон. Кликни по ячейке — выбери подходящую карточку.",
+    type:"structure"
+  },
+  /* Уровень 2 — PK */
+  {
+    title:"Уровень 2. Найди уникальное",
+    speech:"В таблице нужен «главный» столбец — по нему всегда понятно, о ком речь. Выбери поле, которое никогда не повторяется. Если такого нет — собери составной ключ из двух полей.",
+    type:"pk"
+  },
+  /* Уровень 3 — аномалии */
+  {
+    title:"Уровень 3. День аномалий",
+    speech:"Петров переехал в кабинет 410. Исправь таблицу. Внимание: у Петрова несколько строк!",
+    type:"anomaly_update"
+  },
+  {
+    title:"Уровень 3.2. Новый сотрудник",
+    speech:"Пришёл преподаватель Кузнецов. У него пока нет студентов. Попробуй добавить его в таблицу.",
+    type:"anomaly_insert"
+  },
+  {
+    title:"Уровень 3.3. Уход студента",
+    speech:"Смирнов забрал документы. Удали его строку. Посмотри, что исчезнет вместе с ним.",
+    type:"anomaly_delete"
+  },
+  /* Уровень 4 — нормализация */
+  {
+    title:"Уровень 4. Разбери завал",
+    speech:"Таблица трещит по швам. Разложи поля по четырём таблицам. Перетаскивай (или кликай) поля в нужные зоны. Не забудь про ключи!",
+    type:"normalize"
+  },
+  /* Уровень 5 — экзамен */
+  {
+    title:"Уровень 5. Экзамен в Бюро",
+    speech:"Новая таблица — «Библиотека». Примени всё, чему научился: найди PK и разбей на таблицы.",
+    type:"exam"
+  }
+];
+
+/* ================== СОСТОЯНИЕ ================== */
+let step = 0;
+let unlocked = false; // для кнопки Далее
+const $ = id => document.getElementById(id);
+const stage = $("stage");
+const feedback = $("feedback");
+const btnNext = $("btnNext");
+const progressEl = $("progress");
+
+/* ================== УТИЛИТЫ ================== */
+function setSpeech(t){ $("speech").innerHTML = t; }
+function showFeedback(text, kind="info"){
+  feedback.className = "feedback show " + kind;
+  feedback.innerHTML = text;
+}
+function clearFeedback(){ feedback.className = "feedback"; feedback.innerHTML = ""; }
+function enableNext(v){ btnNext.disabled = !v; }
+function renderProgress(){
+  progressEl.innerHTML = "";
+  LEVELS.forEach((_,i)=>{
+    const d = document.createElement("div");
+    d.className = "dot";
+    if(i < step) d.classList.add("done");
+    if(i === step) d.classList.add("active");
+    progressEl.appendChild(d);
+  });
+}
+function el(tag, cls, html){
+  const e = document.createElement(tag);
+  if(cls) e.className = cls;
+  if(html !== undefined) e.innerHTML = html;
+  return e;
+}
+
+/* ================== УРОВЕНЬ 1: СТРУКТУРА ================== */
+function renderStructure(){
+  const data = [
+    {name:"Иванов Иван", city:"Москва", phone:"+7 900 111-22-33"},
+    {name:"Петрова Анна", city:"Казань", phone:"+7 900 444-55-66"},
+    {name:"Смирнов Олег", city:"Сочи", phone:"+7 900 777-88-99"}
+  ];
+  const fields = ["Имя","Город","Телефон"];
+  // пул карточек (перемешанные значения)
+  const poolValues = [];
+  data.forEach((r,ri)=>{
+    ["name","city","phone"].forEach(k=>{
+      poolValues.push({ri, k, val:r[k]});
+    });
+  });
+  shuffle(poolValues);
+
+  const wrap = el("div");
+  wrap.appendChild(el("div","task","Кликни по ячейке таблицы, затем по карточке внизу — она встанет на место. Или перетащи карточку в ячейку."));
+
+  const table = el("table","table");
+  const thead = el("thead");
+  const trh = el("tr");
+  fields.forEach(f=>trh.appendChild(el("th",null,f)));
+  thead.appendChild(trh); table.appendChild(thead);
+
+  const tbody = el("tbody");
+  const cells = [];
+  data.forEach((r,ri)=>{
+    const tr = el("tr");
+    ["name","city","phone"].forEach((k,ci)=>{
+      const td = el("td","clickable","—");
+      td.dataset.ri = ri; td.dataset.ci = ci; td.dataset.k = k;
+      td.addEventListener("click", ()=>{
+        // снять выделение
+        document.querySelectorAll("td.sel").forEach(x=>x.classList.remove("sel"));
+        td.classList.add("sel");
+      });
+      td.addEventListener("dragover", e=>{ e.preventDefault(); td.classList.add("hl"); });
+      td.addEventListener("dragleave", ()=>td.classList.remove("hl"));
+      td.addEventListener("drop", e=>{
+        e.preventDefault(); td.classList.remove("hl");
+        const val = e.dataTransfer.getData("text/plain");
+        placeValue(td, val);
+      });
+      cells.push(td);
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+
+  const pool = el("div","pool");
+  pool.id = "pool";
+  poolValues.forEach(p=>{
+    const chip = el("div","chip", p.val);
+    chip.draggable = true;
+    chip.dataset.ri = p.ri; chip.dataset.k = p.k; chip.dataset.val = p.val;
+    chip.addEventListener("dragstart", e=>{
+      e.dataTransfer.setData("text/plain", JSON.stringify({ri:p.ri,k:p.k,val:p.val}));
+      chip.classList.add("dragging");
+    });
+    chip.addEventListener("dragend", ()=>chip.classList.remove("dragging"));
+    chip.addEventListener("click", ()=>{
+      const sel = document.querySelector("td.sel");
+      if(!sel){ showFeedback("Сначала выбери ячейку в таблице (кликни по ней).","bad"); return; }
+      placeValue(sel, JSON.stringify({ri:p.ri,k:p.k,val:p.val}));
+    });
+    pool.appendChild(chip);
+  });
+  wrap.appendChild(pool);
+
+  // проверка
+  const btnCheck = el("button",null,"Проверить");
+  btnCheck.style.marginTop = "10px";
+  btnCheck.addEventListener("click", ()=>{
+    let ok = 0, total = 9;
+    cells.forEach(td=>{
+      const ri = +td.dataset.ri, k = td.dataset.k;
+      const correct = data[ri][k];
+      const val = td.dataset.val;
+      if(val === correct){ td.classList.add("good"); ok++; }
+      else if(val){ td.classList.add("bad"); }
+    });
+    if(ok === total){
+      showFeedback("✅ Отлично! Все карточки на своих местах. Ты только что разложил <b>записи</b> (строки) по <b>полям</b> (столбцам). Каждая строка — один человек, каждый столбец — характеристика.","ok");
+      enableNext(true);
+    } else {
+      showFeedback(`Правильно размещено ${ok} из 9. Красные ячейки — ошибки, попробуй ещё раз.`,"bad");
+    }
+  });
+  wrap.appendChild(btnCheck);
+
+  // функция размещения
+  function placeValue(td, raw){
+    let obj;
+    try{ obj = typeof raw === "string" ? JSON.parse(raw) : raw; }catch(e){ return; }
+    // очистить предыдущее
+    td.textContent = obj.val;
+    td.dataset.val = obj.val;
+    td.classList.remove("good","bad","sel");
+    // убрать карточку из пула
+    document.querySelectorAll("#pool .chip").forEach(c=>{
+      if(c.dataset.ri == obj.ri && c.dataset.k == obj.k && !c.classList.contains("used")){
+        c.classList.add("used"); c.style.opacity = "0.25"; c.style.pointerEvents = "none";
+      }
+    });
+  }
+
+  stage.innerHTML = ""; stage.appendChild(wrap);
+  enableNext(false);
+}
+
+/* ================== УРОВЕНЬ 2: PK ================== */
+function renderPK(){
+  const rows = [
+    {id:"S-101", name:"Иванов", subject:"Математика", grade:5},
+    {id:"S-102", name:"Иванов", subject:"Физика", grade:4},
+    {id:"S-103", name:"Петрова", subject:"Математика", grade:5},
+    {id:"S-104", name:"Смирнов", subject:"Физика", grade:3}
+  ];
+  const cols = ["id","name","subject","grade"];
+  const colNames = {id:"ID_студента", name:"Студент", subject:"Предмет", grade:"Оценка"};
+
+  const wrap = el("div");
+  wrap.appendChild(el("div","task","Выбери поле, которое может быть первичным ключом (уникально в каждой строке). Если такого нет — выбери два поля для составного ключа."));
+
+  const table = el("table","table");
+  const thead = el("thead"); const trh = el("tr");
+  cols.forEach(c=>trh.appendChild(el("th",null,colNames[c])));
+  thead.appendChild(trh); table.appendChild(thead);
+  const tbody = el("tbody");
+  rows.forEach(r=>{
+    const tr = el("tr");
+    cols.forEach(c=>tr.appendChild(el("td",null,r[c])));
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody); wrap.appendChild(table);
+
+  const chipsWrap = el("div","cards");
+  const selected = new Set();
+  cols.forEach(c=>{
+    const chip = el("div","chip", colNames[c]);
+    chip.dataset.col = c;
+    chip.addEventListener("click", ()=>{
+      if(selected.has(c)){ selected.delete(c); chip.classList.remove("sel"); }
+      else { selected.add(c); chip.classList.add("sel"); }
+    });
+    chipsWrap.appendChild(chip);
+  });
+  wrap.appendChild(chipsWrap);
+
+  const btnCheck = el("button",null,"Проверить ключ");
+  btnCheck.style.marginTop = "10px";
+  btnCheck.addEventListener("click", ()=>{
+    const arr = [...selected];
+    if(arr.length === 0){ showFeedback("Выбери хотя бы одно поле.","bad"); return; }
+    // проверим уникальность выбранного набора
+    const seen = new Set();
+    let unique = true;
+    rows.forEach(r=>{
+      const key = arr.map(c=>r[c]).join("|");
+      if(seen.has(key)) unique = false;
+      seen.add(key);
+    });
+    if(arr.length === 1){
+      const c = arr[0];
+      const allUnique = rows.every((r,i)=> rows.findIndex(x=>x[c]===r[c]) === i);
+      if(allUnique){
+        showFeedback(`✅ Поле «${colNames[c]}» уникально — это <b>первичный ключ (PK)</b>. По нему всегда понятно, о ком запись.`,"ok");
+        enableNext(true);
+      } else {
+        showFeedback(`❌ Поле «${colNames[c]}» повторяется (например, «Иванов» встречается дважды). Значит, PK быть не может — ключ должен быть уникальным.`,"bad");
+      }
+    } else if(unique){
+      showFeedback(`✅ Набор полей уникален в каждой строке — это <b>составной первичный ключ</b>. Например, «Студент + Предмет»: один студент может сдавать разные предметы, но пара «студент-предмет» уникальна.`,"ok");
+      enableNext(true);
+    } else {
+      showFeedback("❌ Даже вместе эти поля повторяются. Попробуй другой набор.","bad");
+    }
+  });
+  wrap.appendChild(btnCheck);
+
+  stage.innerHTML = ""; stage.appendChild(wrap);
+  enableNext(false);
+}
+
+/* ================== УРОВЕНЬ 3.1: АНОМАЛИЯ ОБНОВЛЕНИЯ ================== */
+function renderAnomalyUpdate(){
+  const rows = [
+    {student:"Иванов", subject:"Математика", teacher:"Петров", room:301, grade:5},
+    {student:"Иванов", subject:"Физика", teacher:"Сидоров", room:205, grade:4},
+    {student:"Петрова", subject:"Математика", teacher:"Петров", room:301, grade:5},
+    {student:"Смирнов", subject:"Физика", teacher:"Сидоров", room:205, grade:3}
+  ];
+  const wrap = el("div");
+  wrap.appendChild(el("div","task","Петров переехал в кабинет 410. Измени все строки, где он встречается. Кликни по ячейке «Кабинет» и введи новое значение."));
+
+  const table = el("table","table");
+  const thead = el("thead"); const trh = el("tr");
+  ["Студент","Предмет","Преподаватель","Кабинет","Оценка"].forEach(h=>trh.appendChild(el("th",null,h)));
+  thead.appendChild(trh); table.appendChild(thead);
+  const tbody = el("tbody");
+  rows.forEach((r,ri)=>{
+    const tr = el("tr");
+    tr.appendChild(el("td",null,r.student));
+    tr.appendChild(el("td",null,r.subject));
+    tr.appendChild(el("td",null,r.teacher));
+    const tdRoom = el("td","clickable", r.room);
+    tdRoom.dataset.ri = ri;
+    tdRoom.addEventListener("click", ()=>{
+      const v = prompt("Новый кабинет для " + r.teacher + ":", tdRoom.textContent);
+      if(v !== null && v.trim() !== ""){
+        tdRoom.textContent = v.trim();
+        tdRoom.classList.add("sel");
+        check();
+      }
+    });
+    tr.appendChild(tdRoom);
+    tr.appendChild(el("td",null,r.grade));
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody); wrap.appendChild(table);
+
+  const timeEl = el("div","timer","⏱ 60 секунд");
+  wrap.appendChild(timeEl);
+
+  let timeLeft = 60;
+  const timer = setInterval(()=>{
+    timeLeft--;
+    timeEl.textContent = "⏱ " + timeLeft + " секунд";
+    if(timeLeft <= 0){ clearInterval(timer); timeEl.textContent = "⏱ Время вышло"; check(true); }
+  },1000);
+
+  function check(force){
+    const cells = tbody.querySelectorAll("td[data-ri]");
+    let petrovRows = 0, petrovOk = 0;
+    cells.forEach(td=>{
+      const ri = +td.dataset.ri;
+      if(rows[ri].teacher === "Петров"){
+        petrovRows++;
+        if(td.textContent.trim() === "410"){ td.classList.add("good"); petrovOk++; }
+        else { td.classList.add("bad"); }
+      }
+    });
+    if(petrovOk === petrovRows && petrovRows === 2){
+      clearInterval(timer);
+      showFeedback("✅ Все строки Петрова обновлены. Но заметь: пришлось править <b>две</b> строки, хотя преподаватель один. Это <b>аномалия обновления</b> — следствие избыточности (имя и кабинет Петрова дублируются). Если строк будет 100 — править придётся 100 раз, и легко ошибиться.","ok");
+      enableNext(true);
+    } else if(force || petrovOk < petrovRows){
+      showFeedback(`Обновлено ${petrovOk} из ${petrovRows} строк с Петровым. Проверь все его строки — именно в этом и проблема: данные дублируются, и легко пропустить одну.`,"bad");
+    }
+  }
+
+  stage.innerHTML = ""; stage.appendChild(wrap);
+  enableNext(false);
+}
+
+/* ================== УРОВЕНЬ 3.2: АНОМАЛИЯ ВСТАВКИ ================== */
+function renderAnomalyInsert(){
+  const rows = [
+    {student:"Иванов", subject:"Математика", teacher:"Петров", room:301},
+    {student:"Иванов", subject:"Физика", teacher:"Сидоров", room:205}
+  ];
+  const wrap = el("div");
+  wrap.appendChild(el("div","task","Пришёл преподаватель Кузнецов (кабинет 210). У него пока нет студентов. Попробуй добавить его в таблицу. Кликни «Добавить преподавателя»."));
+
+  const table = el("table","table");
+  const thead = el("thead"); const trh = el("tr");
+  ["Студент","Предмет","Преподаватель","Кабинет"].forEach(h=>trh.appendChild(el("th",null,h)));
+  thead.appendChild(trh); table.appendChild(thead);
+  const tbody = el("tbody");
+  rows.forEach(r=>{
+    const tr = el("tr");
+    tr.appendChild(el("td",null,r.student));
+    tr.appendChild(el("td",null,r.subject));
+    tr.appendChild(el("td",null,r.teacher));
+    tr.appendChild(el("td",null,r.room));
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody); wrap.appendChild(table);
+
+  const btnAdd = el("button",null,"Добавить преподавателя Кузнецова");
+  btnAdd.style.marginTop = "10px";
+  btnAdd.addEventListener("click", ()=>{
+    const tr = el("tr");
+    const tdS = el("td",null,"?"); tdS.style.color = "var(--bad)";
+    tr.appendChild(tdS);
+    const tdP = el("td",null,"?"); tdP.style.color = "var(--bad)";
+    tr.appendChild(tdP);
+    tr.appendChild(el("td",null,"Кузнецов"));
+    tr.appendChild(el("td",null,"210"));
+    tbody.appendChild(tr);
+    showFeedback("⚠️ Пришлось вписать «?» вместо студента и предмета. Таблица не позволяет хранить преподавателя без студента. Это <b>аномалия вставки</b>: структура одной таблицы не даёт добавить независимые данные. Пришлось бы придумывать фиктивного студента — а это ложные данные.","bad");
+    enableNext(true);
+  });
+  wrap.appendChild(btnAdd);
+
+  stage.innerHTML = ""; stage.appendChild(wrap);
+  enableNext(false);
+}
+
+/* ================== УРОВЕНЬ 3.3: АНОМАЛИЯ УДАЛЕНИЯ ================== */
+function renderAnomalyDelete(){
+  const rows = [
+    {student:"Иванов", subject:"Математика", teacher:"Петров", room:301},
+    {student:"Иванов", subject:"Физика", teacher:"Сидоров", room:205},
+    {student:"Смирнов", subject:"Физика", teacher:"Сидоров", room:205}
+  ];
+  const wrap = el("div");
+  wrap.appendChild(el("div","task","Смирнов ушёл. Удали его строку — нажми «Удалить» напротив Смирнова. Посмотри, что произойдёт с данными о преподавателе Сидорове."));
+
+  const table = el("table","table");
+  const thead = el("thead"); const trh = el("tr");
+  ["Студент","Предмет","Преподаватель","Кабинет",""].forEach(h=>trh.appendChild(el("th",null,h)));
+  thead.appendChild(trh); table.appendChild(thead);
+  const tbody = el("tbody");
+  rows.forEach((r,ri)=>{
+    const tr = el("tr");
+    tr.appendChild(el("td",null,r.student));
+    tr.appendChild(el("td",null,r.subject));
+    tr.appendChild(el("td",null,r.teacher));
+    tr.appendChild(el("td",null,r.room));
+    const tdBtn = el("td");
+    const b = el("button",null,"Удалить");
+    b.style.padding = "4px 10px"; b.style.fontSize = "12px";
+    b.addEventListener("click", ()=>{
+      tr.remove();
+      if(r.student === "Смирнов"){
+        showFeedback("⚠️ Строка Смирнова удалена. Вместе с ней из таблицы исчезли данные о преподавателе <b>Сидорове</b> и кабинете 205 — они встречались только в этой строке. Это <b>аномалия удаления</b>: удаляя одно, теряешь другое. В нормализованной БД преподаватель хранился бы отдельно и не пропал бы.","bad");
+        enableNext(true);
+      }
+    });
+    tdBtn.appendChild(b);
+    tr.appendChild(tdBtn);
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody); wrap.appendChild(table);
+
+  stage.innerHTML = ""; stage.appendChild(wrap);
+  enableNext(false);
+}
+
+/* ================== УРОВЕНЬ 4: НОРМАЛИЗАЦИЯ ================== */
+function renderNormalize(){
+  const zones = [
+    {id:"students", title:"Студенты", fields:[{name:"ID_студента",tag:"pk"},{name:"ФИО"}]},
+    {id:"teachers", title:"Преподаватели", fields:[{name:"ID_преподавателя",tag:"pk"},{name:"ФИО"},{name:"Кабинет"}]},
+    {id:"subjects", title:"Предметы", fields:[{name:"ID_предмета",tag:"pk"},{name:"Название"}]},
+    {id:"records", title:"Записи", fields:[{name:"ID_студента",tag:"fk"},{name:"ID_предмета",tag:"fk"},{name:"ID_преподавателя",tag:"fk"},{name:"Оценка"}]}
+  ];
+  // пул всех полей (перемешанный)
+  const pool = [];
+  zones.forEach(z=>z.fields.forEach(f=>pool.push({name:f.name, tag:f.tag, zone:z.id})));
+  shuffle(pool);
+
+  const wrap = el("div");
+  wrap.appendChild(el("div","task","Перетащи (или кликни поле → кликни зону) каждое поле в подходящую таблицу. Подсказка: PK — золотые, FK — голубые."));
+
+  const poolWrap = el("div","pool"); poolWrap.id = "normPool";
+  pool.forEach(p=>{
+    const f = el
