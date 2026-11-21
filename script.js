@@ -1,27 +1,40 @@
-// Данные уровней (сюжет)
+// Массив уровней: сначала теория (Уровень 0), потом практика
 const levels = [
+    // --- БЛОК 0: ТЕРМИНЫ ---
     {
-        title: "Уровень 1. Структура",
-        speech: "Вот карточки. Разложи их по столбцам: имя, город, телефон. Кликни по ячейке таблицы, затем по карточке внизу.",
-        type: "structure"
+        title: "Термин 1. Таблица, Запись, Поле",
+        speech: "Привет! Прежде чем начать, давай выучим основы. <b>Таблица</b> — это сетка. <b>Строка (Запись)</b> — один объект. <b>Столбец (Поле)</b> — характеристика. Найди в таблице <b>Запись</b> (строку) студента Смирнова и кликни по ней.",
+        type: "term_structure"
     },
     {
-        title: "Уровень 2. Первичный ключ",
-        speech: "Таблица есть, но нет главного столбца. Выбери поле, которое никогда не повторяется (PK). Если такого нет — выбери два поля для составного ключа.",
-        type: "pk"
+        title: "Термин 2. Первичный ключ (PK)",
+        speech: "<b>Первичный ключ (PK)</b> — это поле, которое никогда не повторяется. Оно уникально для каждой записи. Какой столбец здесь может быть первичным ключом? Кликни по заголовку этого столбца.",
+        type: "term_pk"
     },
     {
-        title: "Уровень 3. Аномалия обновления",
-        speech: "Петров переехал в кабинет 410. Измени все строки, где он встречается. Кликни по ячейке «Кабинет» и введи новое значение.",
+        title: "Термин 3. Внешний ключ (FK) и Связи",
+        speech: "<b>Внешний ключ (FK)</b> — это поле, которое ссылается на ID из другой таблицы. Оно нужно для <b>связи 1:N</b> (один ко многим). Кликни по ячейке, которая является внешним ключом (FK) для таблицы «Студенты».",
+        type: "term_fk"
+    },
+    {
+        title: "Термин 4. Избыточность и Аномалии",
+        speech: "<b>Избыточность</b> — это дублирование данных (когда одно и то же пишут много раз). Кликни на <b>все ячейки</b>, где дублируется преподаватель «Петров».",
+        type: "term_redundancy"
+    },
+
+    // --- БЛОК 1: ПРАКТИКА ---
+    {
+        title: "Практика 1. Аномалия обновления",
+        speech: "Отлично! Теперь ты знаешь термины. Петров переехал в кабинет 410. Найди в таблице ВСЕ строки с Петровым и исправь кабинет на 410. (Кликни по ячейке).",
         type: "anomaly_update"
     },
     {
-        title: "Уровень 4. Нормализация",
-        speech: "Таблица трещит по швам. Разложи поля по четырём таблицам. Кликай по полю, затем по нужной зоне.",
+        title: "Практика 2. Нормализация",
+        speech: "Таблица трещит по швам. Разложи поля по трём таблицам, чтобы устранить избыточность. Кликай по полю внизу, затем по нужной зоне.",
         type: "normalize"
     },
     {
-        title: "Уровень 5. Финал",
+        title: "Финал",
         speech: "Ты справился! Теперь ты знаешь, зачем нужны ключи и нормализация.",
         type: "finish"
     }
@@ -30,7 +43,6 @@ const levels = [
 let currentLevel = 0;
 let canProceed = false;
 
-// DOM элементы
 const stage = document.getElementById('stage');
 const feedback = document.getElementById('feedback');
 const btnNext = document.getElementById('btnNext');
@@ -39,7 +51,6 @@ const progress = document.getElementById('progress');
 const btnCheat = document.getElementById('btnCheat');
 const cheatPanel = document.getElementById('cheatPanel');
 
-// Утилиты
 function el(tag, className, html) {
     const e = document.createElement(tag);
     if (className) e.className = className;
@@ -72,25 +83,16 @@ function enableNext(val) {
     btnNext.disabled = !val;
 }
 
-// Переключение шпаргалки
-btnCheat.addEventListener('click', () => {
-    cheatPanel.classList.toggle('hidden');
-});
-
-// Кнопка Далее
+btnCheat.addEventListener('click', () => cheatPanel.classList.toggle('hidden'));
 btnNext.addEventListener('click', () => {
     if (canProceed) {
         currentLevel++;
-        if (currentLevel < levels.length) {
-            loadLevel();
-        }
+        if (currentLevel < levels.length) loadLevel();
     }
 });
 
-// Загрузка уровня
 function loadLevel() {
     if (currentLevel >= levels.length) return;
-    
     const level = levels[currentLevel];
     speech.innerHTML = level.speech;
     stage.innerHTML = '';
@@ -98,157 +100,179 @@ function loadLevel() {
     enableNext(false);
     updateProgress();
 
-    if (level.type === 'structure') renderStructure();
-    else if (level.type === 'pk') renderPK();
+    if (level.type === 'term_structure') renderTermStructure();
+    else if (level.type === 'term_pk') renderTermPK();
+    else if (level.type === 'term_fk') renderTermFK();
+    else if (level.type === 'term_redundancy') renderTermRedundancy();
     else if (level.type === 'anomaly_update') renderUpdate();
     else if (level.type === 'normalize') renderNormalize();
     else if (level.type === 'finish') renderFinish();
 }
 
-/* --- УРОВЕНЬ 1: СТРУКТУРА --- */
-function renderStructure() {
-    const data = [
-        { name: "Иванов", city: "Москва", phone: "+7 900 111" },
-        { name: "Петрова", city: "Казань", phone: "+7 900 222" },
-        { name: "Смирнов", city: "Сочи", phone: "+7 900 333" }
-    ];
-    const keys = ["name", "city", "phone"];
-    const headers = ["Имя", "Город", "Телефон"];
-    
-    // Создаем пул
-    let poolValues = [];
-    data.forEach((r, ri) => {
-        keys.forEach(k => poolValues.push({ ri, k, val: r[k] }));
-    });
-    poolValues = poolValues.sort(() => Math.random() - 0.5);
-
-    const wrap = el('div');
-    wrap.appendChild(el('div', 'task', 'Кликни по ячейке таблицы, затем по карточке внизу — она встанет на место.'));
-
+/* --- ТЕРМИН 1: СТРУКТУРА --- */
+function renderTermStructure() {
     const table = el('table', 'table');
     const thead = el('thead');
     const trh = el('tr');
-    headers.forEach(h => trh.appendChild(el('th', null, h)));
+    ["Имя", "Возраст", "Город"].forEach(h => trh.appendChild(el('th', null, h)));
     thead.appendChild(trh);
     table.appendChild(thead);
 
     const tbody = el('tbody');
-    const cells = [];
+    const rows = [
+        { name: "Иванов", age: 20, city: "Москва" },
+        { name: "Петров", age: 21, city: "Казань" },
+        { name: "Смирнов", age: 19, city: "Сочи" }
+    ];
     
-    data.forEach((r, ri) => {
+    rows.forEach((r, ri) => {
         const tr = el('tr');
-        keys.forEach((k, ci) => {
-            const td = el('td', 'clickable', '—');
-            td.dataset.ri = ri;
-            td.dataset.k = k;
-            td.addEventListener('click', () => {
-                document.querySelectorAll('td.sel').forEach(x => x.classList.remove('sel'));
-                td.classList.add('sel');
-            });
-            cells.push(td);
-            tr.appendChild(td);
+        tr.appendChild(el('td', null, r.name));
+        tr.appendChild(el('td', null, r.age));
+        
+        // Добавляем обработчик на всю строку (Запись)
+        tr.style.cursor = "pointer";
+        tr.addEventListener('click', () => {
+            if (r.name === "Смирнов") {
+                tr.style.background = "rgba(34,197,94,.3)";
+                showFeedback("✅ Верно! Ты выбрал <b>Запись</b> (строку). А столбцы (Имя, Возраст) — это <b>Поля</b>.", "ok");
+                enableNext(true);
+            } else {
+                showFeedback("❌ Это тоже запись, но нам нужен именно Смирнов.", "bad");
+            }
         });
+        
+        tr.appendChild(el('td', null, r.city));
         tbody.appendChild(tr);
     });
     table.appendChild(tbody);
-    wrap.appendChild(table);
-
-    const pool = el('div', 'pool');
-    poolValues.forEach(p => {
-        const chip = el('div', 'chip', p.val);
-        chip.addEventListener('click', () => {
-            const sel = document.querySelector('td.sel');
-            if (!sel) { showFeedback("Сначала выбери ячейку в таблице.", "bad"); return; }
-            sel.textContent = p.val;
-            sel.dataset.val = p.val;
-            sel.classList.remove('good', 'bad');
-            chip.style.opacity = '0.3';
-            chip.style.pointerEvents = 'none';
-        });
-        pool.appendChild(chip);
-    });
-    wrap.appendChild(pool);
-
-    const btnCheck = el('button', null, 'Проверить');
-    btnCheck.style.marginTop = '10px';
-    btnCheck.addEventListener('click', () => {
-        let ok = 0, total = 9;
-        cells.forEach(td => {
-            const ri = +td.dataset.ri, k = td.dataset.k;
-            const correct = data[ri][k];
-            const val = td.dataset.val;
-            if (val === correct) { td.classList.add('good'); ok++; }
-            else if (val) { td.classList.add('bad'); }
-        });
-        if (ok === total) {
-            showFeedback("✅ Отлично! Ты разложил <b>записи</b> по <b>полям</b>.", "ok");
-            enableNext(true);
-        } else {
-            showFeedback(`Правильно ${ok} из 9. Красные ячейки — ошибки.`, "bad");
-        }
-    });
-    wrap.appendChild(btnCheck);
-    stage.appendChild(wrap);
+    stage.appendChild(table);
 }
 
-/* --- УРОВЕНЬ 2: ПЕРВИЧНЫЙ КЛЮЧ --- */
-function renderPK() {
-    const rows = [
-        { id: "S-101", name: "Иванов", subject: "Математика" },
-        { id: "S-102", name: "Иванов", subject: "Физика" },
-        { id: "S-103", name: "Петрова", subject: "Математика" }
-    ];
-    
-    const wrap = el('div');
-    wrap.appendChild(el('div', 'task', 'Выбери поле, которое уникально в каждой строке (PK).'));
-
+/* --- ТЕРМИН 2: ПЕРВИЧНЫЙ КЛЮЧ --- */
+function renderTermPK() {
     const table = el('table', 'table');
     const thead = el('thead');
     const trh = el('tr');
-    ["ID", "Имя", "Предмет"].forEach(h => trh.appendChild(el('th', null, h)));
+    
+    // Заголовки
+    ["ID", "Имя", "Предмет"].forEach((h, idx) => {
+        const th = el('th', null, h);
+        th.style.cursor = "pointer";
+        th.addEventListener('click', () => {
+            if (h === "ID") {
+                th.style.background = "rgba(34,197,94,.5)";
+                showFeedback("✅ Верно! ID уникален для каждого. Это <b>Первичный ключ (PK)</b>.", "ok");
+                enableNext(true);
+            } else {
+                showFeedback("❌ А если два студента с одинаковым именем? Ключ должен быть уникальным.", "bad");
+            }
+        });
+        trh.appendChild(th);
+    });
     thead.appendChild(trh);
     table.appendChild(thead);
-    
+
     const tbody = el('tbody');
-    rows.forEach(r => {
+    [
+        { id: "S-1", name: "Иванов", subj: "Математика" },
+        { id: "S-2", name: "Иванов", subj: "Физика" },
+        { id: "S-3", name: "Петров", subj: "Математика" }
+    ].forEach(r => {
         const tr = el('tr');
         tr.appendChild(el('td', null, r.id));
         tr.appendChild(el('td', null, r.name));
-        tr.appendChild(el('td', null, r.subject));
+        tr.appendChild(el('td', null, r.subj));
+        tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    stage.appendChild(table);
+}
+
+/* --- ТЕРМИН 3: ВНЕШНИЙ КЛЮЧ --- */
+function renderTermFK() {
+    const wrap = el('div');
+    wrap.innerHTML = `<p style="font-size:14px; margin-bottom:10px;">Таблица «Студенты» имеет PK — <b>ID_студента</b>.</p>`;
+    
+    const table = el('table', 'table');
+    const thead = el('thead');
+    const trh = el('tr');
+    ["ID_записи", "Оценка", "ID_студента"].forEach(h => trh.appendChild(el('th', null, h)));
+    thead.appendChild(trh);
+    table.appendChild(thead);
+
+    const tbody = el('tbody');
+    [
+        { id: "R-1", grade: 5, student: "S-1" },
+        { id: "R-2", grade: 4, student: "S-2" }
+    ].forEach(r => {
+        const tr = el('tr');
+        tr.appendChild(el('td', null, r.id));
+        tr.appendChild(el('td', null, r.grade));
+        
+        const tdFk = el('td', 'clickable', r.student);
+        tdFk.style.cursor = "pointer";
+        tdFk.addEventListener('click', () => {
+            tdFk.style.background = "rgba(34,197,94,.3)";
+            showFeedback("✅ Верно! <b>ID_студента</b> ссылается на другую таблицу. Это <b>Внешний ключ (FK)</b>. Он связывает Записи со Студентами.", "ok");
+            enableNext(true);
+        });
+        tr.appendChild(tdFk);
         tbody.appendChild(tr);
     });
     table.appendChild(tbody);
     wrap.appendChild(table);
-
-    const cards = el('div', 'cards');
-    const selected = new Set();
-    ["id", "name", "subject"].forEach((col, idx) => {
-        const names = ["ID", "Имя", "Предмет"];
-        const chip = el('div', 'chip', names[idx]);
-        chip.addEventListener('click', () => {
-            if (selected.has(col)) { selected.delete(col); chip.classList.remove('sel'); }
-            else { selected.add(col); chip.classList.add('sel'); }
-        });
-        cards.appendChild(chip);
-    });
-    wrap.appendChild(cards);
-
-    const btnCheck = el('button', null, 'Проверить');
-    btnCheck.style.marginTop = '10px';
-    btnCheck.addEventListener('click', () => {
-        const arr = [...selected];
-        if (arr.length === 1 && arr[0] === 'id') {
-            showFeedback("✅ Верно! Поле «ID» уникально — это первичный ключ.", "ok");
-            enableNext(true);
-        } else {
-            showFeedback("❌ Имя повторяется, предмет повторяется. Выбери ID.", "bad");
-        }
-    });
-    wrap.appendChild(btnCheck);
     stage.appendChild(wrap);
 }
 
-/* --- УРОВЕНЬ 3: АНОМАЛИЯ ОБНОВЛЕНИЯ --- */
+/* --- ТЕРМИН 4: ИЗБЫТОЧНОСТЬ --- */
+function renderTermRedundancy() {
+    const wrap = el('div');
+    wrap.appendChild(el('div', 'task', 'Кликни на все ячейки, где написано "Петров".'));
+
+    const table = el('table', 'table');
+    const thead = el('thead');
+    const trh = el('tr');
+    ["Студент", "Преподаватель", "Оценка"].forEach(h => trh.appendChild(el('th', null, h)));
+    thead.appendChild(trh);
+    table.appendChild(thead);
+
+    const tbody = el('tbody');
+    const rows = [
+        { s: "Иванов", t: "Петров", g: 5 },
+        { s: "Петрова", t: "Петров", g: 4 },
+        { s: "Смирнов", t: "Сидоров", g: 3 }
+    ];
+    
+    let found = 0;
+    rows.forEach(r => {
+        const tr = el('tr');
+        tr.appendChild(el('td', null, r.s));
+        
+        const tdT = el('td', 'clickable', r.t);
+        tdT.style.cursor = "pointer";
+        tdT.addEventListener('click', () => {
+            if (r.t === "Петров" && !tdT.classList.contains('good')) {
+                tdT.classList.add('good');
+                found++;
+                if (found === 2) {
+                    showFeedback("✅ Да! Имя преподавателя дублируется. Это <b>Избыточность</b>. Чтобы её убрать, нужна <b>Нормализация</b>.", "ok");
+                    enableNext(true);
+                } else {
+                    showFeedback("Хорошо, ищи дальше. Есть еще?", "info");
+                }
+            }
+        });
+        tr.appendChild(tdT);
+        tr.appendChild(el('td', null, r.g));
+        tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    stage.appendChild(wrap);
+}
+
+/* --- ПРАКТИКА 1: АНОМАЛИЯ --- */
 function renderUpdate() {
     const rows = [
         { student: "Иванов", teacher: "Петров", room: 301 },
@@ -256,7 +280,7 @@ function renderUpdate() {
         { student: "Смирнов", teacher: "Сидоров", room: 205 }
     ];
     const wrap = el('div');
-    wrap.appendChild(el('div', 'task', 'Петров переехал в 410. Кликни по ячейке "Кабинет" и введи 410.'));
+    wrap.appendChild(el('div', 'task', 'Кликни по ячейке "Кабинет" и введи 410.'));
 
     const table = el('table', 'table');
     const thead = el('thead');
@@ -272,12 +296,12 @@ function renderUpdate() {
         tr.appendChild(el('td', null, r.teacher));
         
         const tdRoom = el('td', 'clickable', r.room);
-        tdRoom.dataset.ri = ri;
+        tdRoom.style.cursor = "pointer";
         tdRoom.addEventListener('click', () => {
             const v = prompt("Новый кабинет для " + r.teacher + ":", tdRoom.textContent);
             if (v && v.trim() !== "") {
                 tdRoom.textContent = v.trim();
-                check();
+                tdRoom.classList.remove('good', 'bad');
             }
         });
         tr.appendChild(tdRoom);
@@ -286,21 +310,41 @@ function renderUpdate() {
     table.appendChild(tbody);
     wrap.appendChild(table);
 
-    function check() {
-        const cells = tbody.querySelectorAll('td[data-ri]');
-        let ok = 0;
-        cells.forEach(td => {
-            if (td.textContent.trim() === "410") ok++;
+    const btnCheck = el('button', null, 'Проверить');
+    btnCheck.style.marginTop = '10px';
+    btnCheck.addEventListener('click', () => {
+        let ok = 0, petrovRows = 0;
+        tbody.querySelectorAll('td[data-ri]').forEach(td => {
+            if (rows[+td.dataset.ri].teacher === "Петров") {
+                petrovRows++;
+                if (td.textContent.trim() === "410") { td.classList.add('good'); ok++; }
+                else td.classList.add('bad');
+            }
         });
-        if (ok === 2) {
-            showFeedback("✅ Верно! Пришлось править <b>две</b> строки. Это <b>аномалия обновления</b> — избыточность заставляет дублировать действия.", "ok");
-            enableNext(true);
+        // Добавляем data-ri вручную для проверки
+        if (ok === 0) {
+            let correctCount = 0, pRows = 0;
+            Array.from(tbody.children).forEach((tr, i) => {
+                if (rows[i].teacher === "Петров") {
+                    pRows++;
+                    const roomCell = tr.children[2];
+                    if (roomCell.textContent.trim() === "410") correctCount++;
+                    else roomCell.classList.add('bad');
+                }
+            });
+            if (correctCount === pRows && pRows > 0) {
+                showFeedback("✅ Верно! Пришлось править <b>две</b> строки. Это <b>аномалия обновления</b> — избыточность заставляет дублировать действия.", "ok");
+                enableNext(true);
+            } else {
+                showFeedback(`Обновлено ${correctCount} из ${pRows} строк с Петровым.`, "bad");
+            }
         }
-    }
+    });
+    wrap.appendChild(btnCheck);
     stage.appendChild(wrap);
 }
 
-/* --- УРОВЕНЬ 4: НОРМАЛИЗАЦИЯ --- */
+/* --- ПРАКТИКА 2: НОРМАЛИЗАЦИЯ --- */
 function renderNormalize() {
     const zonesData = [
         { id: "students", title: "Студенты", correct: ["ID_студента", "ФИО"] },
@@ -308,7 +352,6 @@ function renderNormalize() {
         { id: "records", title: "Записи", correct: ["ID_студента", "ID_препода", "Оценка"] }
     ];
 
-    // Пул полей
     const poolItems = [
         { name: "ID_студента", zone: "students" },
         { name: "ФИО", zone: "students" },
@@ -319,19 +362,21 @@ function renderNormalize() {
     ].sort(() => Math.random() - 0.5);
 
     const wrap = el('div');
-    wrap.appendChild(el('div', 'task', 'Кликни по полю внизу, затем по нужной таблице.'));
-
+    
     const pool = el('div', 'pool');
-    const chips = [];
     poolItems.forEach(item => {
         const chip = el('div', 'chip', item.name);
         chip.dataset.name = item.name;
         chip.addEventListener('click', () => {
+            if (chip.parentElement.classList.contains('slot')) {
+                pool.appendChild(chip);
+                chip.classList.remove('sel');
+                return;
+            }
             document.querySelectorAll('.chip.sel').forEach(c => c.classList.remove('sel'));
             chip.classList.add('sel');
         });
         pool.appendChild(chip);
-        chips.push(chip);
     });
     wrap.appendChild(pool);
 
@@ -342,10 +387,12 @@ function renderNormalize() {
         zone.appendChild(el('h4', null, zd.title));
         const slot = el('div', 'slot');
         zone.appendChild(slot);
-        
         zone.addEventListener('click', () => {
             const selChip = document.querySelector('.chip.sel');
             if (!selChip) return;
+            if (selChip.parentElement.classList.contains('slot')) {
+                pool.appendChild(selChip);
+            }
             slot.appendChild(selChip);
             selChip.classList.remove('sel');
         });
@@ -361,17 +408,14 @@ function renderNormalize() {
         zones.forEach(z => {
             const placed = Array.from(z.slot.querySelectorAll('.chip')).map(c => c.dataset.name);
             const correct = z.data.correct;
-            
-            // Проверка на совпадение массивов (без учета порядка)
-            const isMatch = placed.length === correct.length && placed.every(v => correct.includes(v));
-            if (!isMatch) allOk = false;
+            if (placed.length !== correct.length || !placed.every(v => correct.includes(v))) allOk = false;
         });
 
         if (allOk) {
-            showFeedback("✅ Идеально! Ты разбил плоскую таблицу на связанные — это <b>нормализация</b>.", "ok");
+            showFeedback("✅ Идеально! Ты разбил таблицу на связанные — это <b>нормализация</b>.", "ok");
             enableNext(true);
         } else {
-            showFeedback("❌ Не все поля на своих местах. Подумай, где должны храниться ФИО преподавателя и кабинет.", "bad");
+            showFeedback("❌ Не все поля на своих местах.", "bad");
         }
     });
     wrap.appendChild(btnCheck);
@@ -384,7 +428,7 @@ function renderFinish() {
     wrap.style.textAlign = 'center';
     wrap.innerHTML = `
         <h2 style="color:var(--gold);">🏆 Диплом сотрудника Бюро</h2>
-        <p>Вы успешно разобрали картотеку, нашли ключи, пережили аномалии и провели нормализацию!</p>
+        <p>Вы успешно выучили термины, пережили аномалии и провели нормализацию!</p>
         <p style="color:var(--accent); font-weight: bold;">Теперь вы понимаете, зачем нужны таблицы, PK, FK и нормализация.</p>
         <button onclick="location.reload()" class="ghost">Играть снова</button>
     `;
